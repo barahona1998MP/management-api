@@ -4,14 +4,14 @@ import com.lawoffice.managementapi.dto.LawUserDto;
 import com.lawoffice.managementapi.dto.Message;
 import com.lawoffice.managementapi.entity.LawUser;
 import com.lawoffice.managementapi.service.LawUserService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Objects;
+
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -19,7 +19,7 @@ import java.util.Objects;
 public class LawUserController {
 
     @Autowired
-    LawUserService lawUserService;
+    private LawUserService lawUserService;
 
     @GetMapping("/all")
     public ResponseEntity<List<LawUser>> findAll() {
@@ -37,32 +37,57 @@ public class LawUserController {
 
     @GetMapping("/username/{username}")
     public ResponseEntity<LawUser> findByUsername(@PathVariable String username) {
-        if (!lawUserService.existByUsername(username))
+        if (!lawUserService.existsByUserName(username))
             return new ResponseEntity(new Message("username not found"), HttpStatus.NOT_FOUND);
         LawUser lawUser = lawUserService.findByUsername(username).get();
         return new ResponseEntity(lawUser, HttpStatus.OK);
     }
     @PostMapping("/create")
-    public ResponseEntity<?> create(@RequestBody @Valid LawUserDto lawUserDto) {
-        if (lawUserDto == null)
-            return new ResponseEntity(new Message("There cannot be empty or null fields or variables."), HttpStatus.BAD_REQUEST);
-        LawUser lawUser = LawUser.builder()
-                .email(lawUserDto.getEmail())
-                .name(lawUserDto.getName())
-                .lastName(lawUserDto.getLastName())
-                .username(lawUserDto.getUsername())
-                .password(lawUserDto.getPassword())
-                .status(lawUserDto.getStatus())
-                .build();
-        lawUserService.save(lawUser);
-        return new ResponseEntity(new Message("User create successfully"), HttpStatus.CREATED);
+    public ResponseEntity<Message> create(@RequestBody LawUserDto lawUserDto) {
+
+        try {
+
+            if (StringUtils.isEmpty(lawUserDto.getName()) ||
+                    StringUtils.isEmpty(lawUserDto.getLastName()) ||
+                    StringUtils.isEmpty(lawUserDto.getUsername()) ||
+                    StringUtils.isEmpty(lawUserDto.getEmail()) ||
+                    StringUtils.isEmpty(lawUserDto.getPassword())) {
+                return ResponseEntity.badRequest().body(new Message("All fields are required."));
+            }
+
+
+            // Verificar si el correo electrónico ya está en uso
+            if (lawUserService.existsByEmail(lawUserDto.getEmail())) {
+                return ResponseEntity.badRequest().body(new Message("Email already in use."));
+            }
+            // Verificar la unicidad del nombre de usuario
+            if (lawUserService.existsByUserName(lawUserDto.getUsername())){
+                return ResponseEntity.badRequest().body(new Message("Username already in use."));
+            }
+
+            LawUser lawUser = LawUser.builder()
+                    .name(lawUserDto.getName())
+                    .lastName(lawUserDto.getLastName())
+                    .username(lawUserDto.getUsername())
+                    .email(lawUserDto.getEmail())
+                    .password(lawUserDto.getPassword()) // Aplicar función de hash para seguridad
+                    .status(lawUserDto.getStatus())
+                    .build();
+
+
+            lawUserService.save(lawUser);
+            return ResponseEntity.status(HttpStatus.CREATED).body(new Message("User created successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Message("Error creating user: " + e.getMessage()));
+        }
     }
 
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Integer id) {
+    public ResponseEntity<Message> delete(@PathVariable Integer id) {
         if (!lawUserService.existById(id))
-            return new ResponseEntity(new Message("Id not found"), HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Message("Id not found"));
         lawUserService.delete(id);
-        return new ResponseEntity(new Message("Deleted User Successfully"), HttpStatus.NO_CONTENT);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new Message("Deleted User Successfully"));
     }
 }

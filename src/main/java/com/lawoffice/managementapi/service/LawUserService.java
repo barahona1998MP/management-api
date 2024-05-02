@@ -11,7 +11,7 @@ import java.util.Optional;
 @Service
 public class LawUserService {
     @Autowired
-    LawUserRepository lawUserRepository;
+    private LawUserRepository lawUserRepository;
 
     public List<LawUser> findAll() {
         return (List<LawUser>) lawUserRepository.findAll();
@@ -37,7 +37,21 @@ public class LawUserService {
         return lawUserRepository.existsById(id);
     }
 
-    public boolean existByUsername(String username) {
-        return lawUserRepository.existsByUsername(username);
+    public boolean existsByUserName(String userName) {
+        return lawUserRepository.existsByUsername(userName);
+    }
+
+
+    public boolean existsByEmail(String email) {
+        Optional<LawUser> user = lawUserRepository.findByEmail(email);
+        return user.isPresent();
+    }
+
+
+    private boolean isValidPassword(String password) {
+        // Implementar lógica para validar la fortaleza de la contraseña
+        // Por ejemplo, puedes usar expresiones regulares para verificar los requisitos
+        String passwordPattern = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$";
+        return password.matches(passwordPattern);
     }
 }
