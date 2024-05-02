@@ -7,7 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StatusCaseRepository  extends CrudRepository<StatusCase,Integer> {
-    StatusCase save (StatusCaseDto statusCaseDto);
-    Iterable<StatusCase> findAll();
-    void deleteById(Integer id);
+
 }
